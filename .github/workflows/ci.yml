@@ -1,0 +1,237 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend checks (PostgreSQL)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17.8-bookworm
+        env:
+          POSTGRES_DB: yizao_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d yizao_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.ci
+      POSTGRES_DB: yizao_ci
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: 127.0.0.1
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: 3.12.13
+          cache: pip
+          cache-dependency-path: backend/requirements/dev.txt
+      - name: Install dependencies
+        run: python -m pip install --requirement requirements/dev.txt
+      - name: Verify dependency compatibility
+        run: python -m pip check
+      - name: Check formatting and lint
+        run: |
+          ruff format --check .
+          ruff check .
+      - name: Check migrations
+        run: python manage.py makemigrations --check --dry-run
+      - name: Run PostgreSQL-backed tests
+        run: pytest
+      - name: Run Django deployment checks
+        run: python manage.py check --deploy --fail-level ERROR --settings=config.settings.production
+        env:
+          DJANGO_SECRET_KEY: "CI-only!Django-Deploy#Check_2026-A7v9Q2x8L4m6Z0p3N5s1K8d"
+          DJANGO_ALLOWED_HOSTS: example.com
+          DJANGO_CSRF_TRUSTED_ORIGINS: https://example.com
+          DJANGO_SECURE_HSTS_SECONDS: 31536000
+          POSTGRES_DB: yizao_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST: 127.0.0.1
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          version: 11.9.0
+          run_install: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+      - name: Type-check and build
+        run: |
+          pnpm typecheck
+          pnpm build
+
+  security:
+    name: Full-history secret checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Check forbidden tracked files
+        run: bash scripts/check-secrets.sh
+      - name: Scan full Git history with Gitleaks
+        run: >-
+          docker run --rm --volume "$PWD:/repo"
+          ghcr.io/gitleaks/gitleaks:v8.30.1
+          git --redact --no-banner --log-opts="--all" /repo
+
+  deployment:
+    name: Deployment configuration and images
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate shell scripts
+        run: >-
+          docker run --rm --volume "$PWD:/mnt" --workdir /mnt
+          koalaman/shellcheck:v0.11.0
+          scripts/*.sh backend/docker-entrypoint.sh
+      - name: Validate Compose configurations
+        run: |
+          ENV_FILE=.env.example docker compose --env-file .env.example --file docker-compose.yml config --quiet
+          ENV_FILE=.env.example docker compose --env-file .env.example --file docker-compose.prod.yml config --quiet
+          docker compose --env-file .env.example --file deploy/docker-compose.restore-drill.yml config --quiet
+      - name: Validate Caddy configurations
+        run: |
+          docker run --rm --env SITE_ADDRESS=example.com --volume "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm --volume "$PWD/deploy/Caddyfile.dev:/etc/caddy/Caddyfile:ro" caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Build backend production image
+        run: docker build --target production --tag yizao-backend:ci backend
+      - name: Build Caddy and frontend production image
+        run: docker build --file deploy/caddy/Dockerfile --tag yizao-caddy:ci .
+      - name: Run backup and transactional restore drill
+        run: bash scripts/test-backup-restore.sh
+
+  browser:
+    name: Browser, responsive and PWA checks
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17.8-bookworm
+        env:
+          POSTGRES_DB: yizao_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d yizao_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.ci
+      POSTGRES_DB: yizao_ci
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: 127.0.0.1
+      E2E_EMAIL: browser@example.com
+      E2E_PASSWORD: Browser-test-password-2026
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: 3.12.13
+          cache: pip
+          cache-dependency-path: backend/requirements/dev.txt
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          version: 11.9.0
+          run_install: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install backend and frontend dependencies
+        run: |
+          python -m pip install --requirement backend/requirements/dev.txt
+          pnpm --dir frontend install --frozen-lockfile
+          pnpm --dir frontend exec playwright install --with-deps chromium
+      - name: Prepare database
+        working-directory: backend
+        run: |
+          python manage.py migrate --noinput
+          python manage.py shell --command "from accounts.models import User; User.objects.create_user(email='browser@example.com', password='Browser-test-password-2026', display_name='浏览器测试')"
+      - name: Run real-browser checks
+        run: |
+          pnpm --dir frontend build
+          cd backend
+          python manage.py runserver 127.0.0.1:8000 > /tmp/yizao-backend.log 2>&1 &
+          backend_pid=$!
+          cd ..
+          docker run --detach --rm --name yizao-e2e-caddy --network host \
+            --env SITE_ADDRESS=http://127.0.0.1:4174 \
+            --env BACKEND_UPSTREAM=127.0.0.1:8000 \
+            --volume "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            --volume "$PWD/frontend/dist:/srv/app:ro" \
+            caddy:2.10.2-alpine
+          trap 'docker rm --force yizao-e2e-caddy >/dev/null 2>&1 || true; kill "$backend_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:8000/api/health/live/ >/dev/null && break
+            if [[ "$attempt" == 30 ]]; then cat /tmp/yizao-backend.log; exit 1; fi
+            sleep 1
+          done
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:4174/ >/dev/null && break
+            if [[ "$attempt" == 30 ]]; then docker logs yizao-e2e-caddy; exit 1; fi
+            sleep 1
+          done
+          cd frontend
+          PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 \
+            E2E_EXPECT_CACHE_HEADERS=true \
+            pnpm e2e || { docker logs yizao-e2e-caddy; cat /tmp/yizao-backend.log; exit 1; }
+      - name: Upload responsive screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-evidence
+          path: |
+            frontend/test-results/screenshots
+            frontend/test-results/artifacts
+            frontend/playwright-report
+          if-no-files-found: warn
+          retention-days: 14

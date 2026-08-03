@@ -1,0 +1,16 @@
+name: yizao-restore-drill
+
+services:
+  db:
+    image: postgres:17.8-bookworm
+    environment:
+      POSTGRES_DB: restore_drill
+      POSTGRES_USER: restore_drill
+      POSTGRES_PASSWORD: restore-drill-only-password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    tmpfs:
+      - /var/lib/postgresql/data
