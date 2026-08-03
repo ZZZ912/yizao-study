@@ -1,5 +1,17 @@
 # 一造学伴
 
+## 私有内容导入
+
+题库导入默认只执行 dry-run，只有显式 `--commit` 才写入数据库。商业资料、完整提取结果和私有报告不得提交到本公开仓库。
+
+```bash
+cd backend
+python manage.py validate_content ../private-data/incoming/batch/questions.jsonl
+python manage.py import_content ../private-data/incoming/batch/questions.jsonl --dry-run
+```
+
+详见[内容导入流程](docs/CONTENT_INGESTION.md)、[来源政策](docs/SOURCE_POLICY.md)和[内容质检](docs/CONTENT_QA.md)。
+
 面向一级造价工程师的章节培训、知识学习、智能刷题与复习平台。本分支只建立第一阶段工程基础，不包含完整课程、题库或案例题答题界面。
 
 ## 当前范围
