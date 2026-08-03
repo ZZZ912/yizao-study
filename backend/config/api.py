@@ -40,6 +40,9 @@ def api_exception_handler(exc: Exception, context: dict) -> object:
             "field_errors": field_errors,
         }
     }
+    retry_after = getattr(exc, "retry_after", None)
+    if retry_after is not None:
+        response["Retry-After"] = str(retry_after)
     return response
 
 

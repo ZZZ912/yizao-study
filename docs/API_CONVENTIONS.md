@@ -46,7 +46,7 @@
 - `GET /api/v1/auth/csrf/`：设置 CSRF Cookie。
 - `POST /api/v1/auth/login/`：建立 Session，只接受邮箱与密码。
 - `POST /api/v1/auth/logout/`：销毁当前 Session。
-- `GET /api/v1/auth/me/`：返回当前用户；匿名访问返回 401。
+- `GET /api/v1/auth/me/`：返回当前用户；匿名访问返回 `403 + not_authenticated`。
 - 不提供注册端点。
 
 前端发送非安全方法时读取 CSRF Cookie 并设置 `X-CSRFToken`。所有请求使用 `credentials: include`。
@@ -56,17 +56,15 @@
 - `200`：读取或状态变更成功。
 - `201`：资源创建成功。
 - `204`：无响应正文的成功操作。
-- `400`：请求格式或字段无效。
-- `401`：未登录或凭据错误。
-- `403`：已登录但无权限，或 CSRF 验证失败。
+- `400`：请求格式或字段无效；登录凭据错误使用 `invalid_credentials`。
+- `403`：Session API 未登录使用 `not_authenticated`，权限不足使用 `permission_denied`，CSRF 失败使用 `csrf_failed`。
 - `404`：资源不存在或调用者不可见。
 - `409`：版本冲突或幂等冲突。
 - `422`：后续复杂业务规则校验失败时使用。
-- `429`：请求过于频繁。
+- `429`：请求过于频繁；登录限速使用 `login_rate_limited` 并返回 `Retry-After`。
 
 ## 兼容性
 
 - 在 `/api/v1/` 内只做向后兼容的字段增加。
 - 删除或改变字段语义需要新的 API 版本或明确弃用周期。
 - 客户端必须忽略未知字段。
-

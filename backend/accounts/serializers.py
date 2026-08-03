@@ -1,7 +1,15 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
+from .exceptions import InvalidCredentials
 from .models import User
+from .security import (
+    clear_login_failures,
+    enforce_login_rate_limit,
+    get_client_ip,
+    normalize_email,
+    record_login_failure,
+)
 
 
 class LoginSerializer(serializers.Serializer):
@@ -9,17 +17,19 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(trim_whitespace=False, write_only=True)
 
     def validate(self, attrs):
-        email = attrs["email"].strip().lower()
+        request = self.context.get("request")
+        email = normalize_email(attrs["email"])
+        ip_address = get_client_ip(request)
+        enforce_login_rate_limit(scope="api", ip_address=ip_address, email=email)
         user = authenticate(
-            request=self.context.get("request"),
+            request=request,
             email=email,
             password=attrs["password"],
         )
         if user is None or not user.is_active:
-            raise serializers.ValidationError(
-                {"non_field_errors": ["邮箱或密码不正确。"]},
-                code="invalid_credentials",
-            )
+            record_login_failure(scope="api", ip_address=ip_address, email=email)
+            raise InvalidCredentials()
+        clear_login_failures(scope="api", ip_address=ip_address, email=email)
         attrs["user"] = user
         return attrs
 
