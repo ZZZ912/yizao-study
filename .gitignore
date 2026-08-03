@@ -37,6 +37,9 @@ backups/*
 *.dump
 *.sha256
 
+# Docker Compose local overrides
+docker-compose.override.yml
+
 # Editors and operating systems
 .idea/
 .vscode/
