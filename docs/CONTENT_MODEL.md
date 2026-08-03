@@ -49,6 +49,8 @@
 
 稳定实体记录 `current_published_version`。版本记录版本号、创建者、审核者、审核时间、发布时间、变更说明和内容校验摘要。数据库约束与服务层共同阻止修改已发布版本。
 
+发布动作同时固化 `renderer_version`、`sanitizer_version` 和 `content_checksum`，保证未来渲染器升级后仍能审计历史内容。内容版本通过 `ContentProvenance` 关联 `SourceMaterial`；公开仓库只允许原创演示内容和不含受限材料本体的来源元数据。
+
 ## 案例题
 
 - `QuestionGroup`：一组共享背景材料的题目容器。
@@ -58,4 +60,3 @@
 - `ReferenceStep`：计算或论证步骤、公式、结果、单位与顺序。
 
 用户作答按 `QuestionPart` 保存，不把整道案例题答案合并成一段文本。评分结果同时保存总分和逐评分点明细，便于复核与后续算法升级。
-

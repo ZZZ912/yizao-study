@@ -6,6 +6,7 @@
 - 所有核心模型包含 `created_at` 与 `updated_at`。
 - 时间以 UTC 存储，展示时转换为 `Asia/Shanghai`。
 - 发布内容不使用覆盖更新；历史学习记录始终引用具体版本。
+- 历史答题、试卷、发布审核和内容来源记录引用的版本使用 `on_delete=PROTECT`，不得因后台删除操作级联丢失。
 - 状态、排序、外键完整性和唯一性尽可能由数据库约束保护。
 
 ## 第一阶段模型
@@ -56,7 +57,11 @@
 ### practice
 
 - `PracticeSession`：一次练习及其选题范围。
-- `AnswerAttempt`：引用 `QuestionVersion`，保存结构化答案、正确性、耗时和错误原因。
+- `AnswerAttempt`：引用 `QuestionVersion`，保存结构化答案、正确性、耗时和错误原因，并包含：
+  - `answer_schema_version`：用户答案结构的解释版本。
+  - `grading_version`：判分规则或人工评分口径版本。
+  - `presented_option_order`：本次实际呈现的选项顺序快照。
+  - `idempotency_key`：按用户唯一的提交幂等键。
 - `QuestionPartAttempt`：案例小问答案、得分与评分明细。
 - `FavoriteQuestion`：用户收藏，用户与题目唯一。
 - `WrongQuestion`：首次/最近错误、错误次数、状态和掌握度。
@@ -71,9 +76,26 @@
 
 ### exams、notes、content_updates
 
-- `ExamPaper`、`PaperQuestion`、`ExamAttempt`、`ExamAnswer`、`ExamKnowledgeResult`。
+- `ExamPaper`、`PaperQuestion`、`ExamAttempt`、`ExamAnswer`、`ExamKnowledgeResult`。试卷发布与作答记录必须快照当时的题目顺序、选项顺序和分值，不能依赖之后变化的当前版本。
 - `Note`：只允许关联知识点或题目中的一种，并由检查约束保证。
 - `ContentRelease`、`ContentChange`、`ContentReview`：发布批次、变更项和审核记录。
+
+### sources
+
+- `SourceMaterial`：来源稳定身份和权利边界，不保存商业文件本体。
+- `ContentProvenance`：某个内容版本与来源之间的追溯记录。
+- 来源元数据至少包含 `source_type`、`institution`、`title`、`year`、`page_or_timestamp`、`rights_scope`、`originality_type` 和 `private_reference`。
+- `private_reference` 只能保存本地逻辑标识或内部编号；禁止保存商业 PDF、本地文件内容、公开下载地址或个人磁盘绝对路径。
+
+## 已发布版本完整性
+
+`CourseVersion`、`LessonVersion`、`KnowledgeVersion`、`QuestionVersion` 和 `FlashcardVersion` 发布时还需固化：
+
+- `renderer_version`：Markdown/KaTeX 渲染实现版本。
+- `sanitizer_version`：内容清洗规则版本。
+- `content_checksum`：规范化内容的校验摘要。
+
+这些字段与审核记录一起用于复现历史展示结果；已发布版本仍不可原地修改。
 
 ## 关键索引与约束
 
