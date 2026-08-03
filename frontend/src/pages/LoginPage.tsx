@@ -4,6 +4,8 @@ import { Navigate, useNavigate } from "react-router";
 
 import { ApiError, loginUser } from "../api/client";
 import { currentUserQuery } from "../auth";
+import { Button } from "../components/ui/Button";
+import { FormField } from "../components/ui/FormField";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -51,30 +53,30 @@ export function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <label>
-            邮箱
-            <input
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            密码
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
+          <FormField
+            id="email"
+            name="email"
+            label="邮箱"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+          <FormField
+            id="password"
+            name="password"
+            label="密码"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
           {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
-          <button type="submit" disabled={loginMutation.isPending}>
+          <Button type="submit" disabled={loginMutation.isPending}>
             {loginMutation.isPending ? "正在登录…" : "登录"}
-          </button>
+          </Button>
         </form>
 
         <p className="helper-text">第一阶段不开放公众注册，请联系管理员创建账户。</p>

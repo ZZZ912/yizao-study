@@ -29,6 +29,7 @@ export class ApiError extends Error {
 }
 
 let csrfToken: string | null = null;
+let csrfTokenRequest: Promise<string> | null = null;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -58,16 +59,54 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function ensureCsrfToken(): Promise<string> {
-  const response = await request<DataResponse<{ csrf_token: string }>>(
-    "/api/v1/auth/csrf/",
-  );
-  csrfToken = response.data.csrf_token;
-  return csrfToken;
+  if (csrfToken) {
+    return csrfToken;
+  }
+  if (!csrfTokenRequest) {
+    csrfTokenRequest = request<DataResponse<{ csrf_token: string }>>(
+      "/api/v1/auth/csrf/",
+    )
+      .then((response) => {
+        csrfToken = response.data.csrf_token;
+        return csrfToken;
+      })
+      .finally(() => {
+        csrfTokenRequest = null;
+      });
+  }
+  return csrfTokenRequest;
 }
 
-async function mutationHeaders(): Promise<Record<string, string>> {
-  const token = csrfToken ?? (await ensureCsrfToken());
-  return { "X-CSRFToken": token };
+function clearCsrfToken(): void {
+  csrfToken = null;
+  csrfTokenRequest = null;
+}
+
+async function csrfMutation<T>(path: string, init: RequestInit): Promise<T> {
+  async function send(retriedAfterCsrfFailure: boolean): Promise<T> {
+    const token = await ensureCsrfToken();
+    try {
+      return await request<T>(path, {
+        ...init,
+        headers: {
+          ...init.headers,
+          "X-CSRFToken": token,
+        },
+      });
+    } catch (error) {
+      if (
+        !retriedAfterCsrfFailure &&
+        error instanceof ApiError &&
+        error.code === "csrf_failed"
+      ) {
+        clearCsrfToken();
+        return send(true);
+      }
+      throw error;
+    }
+  }
+
+  return send(false);
 }
 
 export async function getCurrentUser(): Promise<User> {
@@ -79,17 +118,18 @@ export async function loginUser(credentials: {
   email: string;
   password: string;
 }): Promise<User> {
-  const response = await request<DataResponse<User>>("/api/v1/auth/login/", {
+  const response = await csrfMutation<DataResponse<User>>("/api/v1/auth/login/", {
     method: "POST",
-    headers: await mutationHeaders(),
     body: JSON.stringify(credentials),
   });
+  clearCsrfToken();
+  await ensureCsrfToken();
   return response.data;
 }
 
 export async function logoutUser(): Promise<void> {
-  await request<void>("/api/v1/auth/logout/", {
+  await csrfMutation<void>("/api/v1/auth/logout/", {
     method: "POST",
-    headers: await mutationHeaders(),
   });
+  clearCsrfToken();
 }

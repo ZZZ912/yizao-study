@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router";
 
 import { ApiError } from "./api/client";
 import { currentUserQuery } from "./auth";
+import { PwaStatus } from "./components/pwa/PwaStatus";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 
@@ -26,10 +27,13 @@ function HomeRoute() {
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomeRoute />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <PwaStatus />
+      <Routes>
+        <Route path="/" element={<HomeRoute />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
