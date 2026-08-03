@@ -18,7 +18,7 @@
 - 唯一、规范化邮箱
 - `display_name`
 - `is_active`、`is_staff`、`date_joined`
-- 用户名仅作为内部兼容字段，登录使用邮箱
+- 不保留用户名字段，登录标识为邮箱
 
 第一阶段不提供注册模型或注册 API。管理员通过 Django Admin 或 `createsuperuser`/后续管理命令创建用户。
 
@@ -85,4 +85,3 @@
 - 用户复习队列索引 `(user, next_review_at)`。
 - 错题查询索引 `(user, status, last_wrong_at)`。
 - 答题提交使用业务幂等键并按用户唯一。
-

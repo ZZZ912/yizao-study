@@ -35,7 +35,7 @@ Gunicorn + Django REST Framework
 - 前端由多阶段 Docker 构建生成静态文件，再复制到 Caddy 镜像。
 - Django 由 Gunicorn `gthread` worker 运行，初始配置为 3 workers、每个 2 threads。
 - Gunicorn 设置请求超时、`max-requests` 和抖动，降低长期进程内存增长风险。
-- PostgreSQL 只加入内部 Compose 网络，使用命名卷持久化。
+- PostgreSQL 只加入内部 Compose 网络，使用命名卷持久化，初始最大连接数为 50。
 - Django 数据库连接使用有限的 `CONN_MAX_AGE`；生产数据库最大连接数保持保守，并为管理与备份预留容量。
 - 所有长期服务使用 `restart: unless-stopped` 和健康检查。
 
@@ -66,4 +66,3 @@ Gunicorn + Django REST Framework
 - 存活检查只验证进程可响应。
 - 就绪检查验证数据库可执行轻量查询。
 - 日志不得包含密码、Session Cookie、CSRF Token、数据库密码或用户完整答案正文。
-

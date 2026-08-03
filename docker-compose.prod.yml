@@ -3,6 +3,7 @@ name: yizao-study
 services:
   db:
     image: postgres:17.8-bookworm
+    command: ["postgres", "-c", "max_connections=${POSTGRES_MAX_CONNECTIONS:-50}"]
     env_file: ${ENV_FILE:-.env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -28,7 +29,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready/', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; request = urllib.request.Request('http://127.0.0.1:8000/api/health/ready/', headers={'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(request, timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 5
