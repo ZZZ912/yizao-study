@@ -1,0 +1,43 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+backend/db.sqlite3
+backend/staticfiles/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+coverage/
+
+# Runtime data
+media/
+logs/
+backups/*
+!backups/.gitkeep
+*.sql
+*.sql.gz
+*.dump
+*.sha256
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
