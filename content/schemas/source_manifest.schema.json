@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yizao-study.local/schemas/source_manifest.schema.json",
+  "title": "Yizao private source manifest",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": true,
+    "required": [
+      "file_name",
+      "pages",
+      "sha256",
+      "source_kind",
+      "rights_scope",
+      "public_repo_allowed"
+    ],
+    "properties": {
+      "file_name": {"type": "string", "minLength": 1},
+      "pages": {"type": "integer", "minimum": 1},
+      "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+      "source_kind": {"type": "string", "minLength": 1},
+      "rights_scope": {"type": "string", "minLength": 1},
+      "public_repo_allowed": {"type": "boolean"},
+      "status": {"type": "string"}
+    },
+    "allOf": [
+      {
+        "if": {"properties": {"rights_scope": {"const": "private_personal_use"}}},
+        "then": {"properties": {"public_repo_allowed": {"const": false}}}
+      }
+    ]
+  }
+}
