@@ -24,6 +24,7 @@ backend/staticfiles/
 node_modules/
 frontend/dist/
 frontend/.vite/
+*.tsbuildinfo
 coverage/
 
 # Runtime data

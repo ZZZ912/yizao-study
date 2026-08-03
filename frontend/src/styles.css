@@ -1,0 +1,191 @@
+:root {
+  color: #1f2925;
+  background: #f7f8f3;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 0.75rem;
+  padding: 0.8rem 1rem;
+  color: #fff;
+  background: #12372a;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+}
+
+.brand-panel,
+.login-card {
+  padding: clamp(1.5rem, 6vw, 4rem);
+}
+
+.brand-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  min-height: 36vh;
+  color: #f7f8f3;
+  background: #12372a;
+}
+
+.brand-panel h1,
+.dashboard-card h1 {
+  margin: 0.25rem 0;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: clamp(2.4rem, 9vw, 5rem);
+  line-height: 1;
+}
+
+.brand-panel p:last-child {
+  max-width: 34rem;
+  color: #d5e3da;
+  line-height: 1.8;
+}
+
+.eyebrow {
+  margin: 0 0 0.6rem;
+  color: #b37a1d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5rem;
+  max-width: 34rem;
+  width: 100%;
+  margin: auto;
+}
+
+.login-card h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.login-card form {
+  display: grid;
+  gap: 1rem;
+}
+
+.login-card label {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 650;
+}
+
+.login-card input {
+  width: 100%;
+  border: 1px solid #bdc8c1;
+  border-radius: 0.7rem;
+  padding: 0.8rem;
+  color: #1f2925;
+  background: #fff;
+}
+
+.login-card input:focus-visible,
+button:focus-visible {
+  outline: 3px solid #d9a441;
+  outline-offset: 2px;
+}
+
+.form-error {
+  margin: 0;
+  color: #a22f2f;
+}
+
+.helper-text {
+  margin: 0;
+  color: #65716c;
+  font-size: 0.9rem;
+}
+
+.dashboard-shell {
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 70rem;
+  margin: 0 auto;
+  padding: 0.8rem 0;
+}
+
+.secondary-button {
+  color: #12372a;
+  background: #e2e9e4;
+}
+
+.dashboard-card {
+  max-width: 70rem;
+  margin: 12vh auto 0;
+  border: 1px solid #dce3de;
+  border-radius: 1.25rem;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  background: #fff;
+  box-shadow: 0 20px 60px rgb(18 55 42 / 8%);
+}
+
+.dashboard-card h1 {
+  font-size: clamp(2rem, 7vw, 4.2rem);
+}
+
+.dashboard-card p:last-child {
+  max-width: 44rem;
+  color: #5e6d66;
+  line-height: 1.8;
+}
+
+.page-state {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem;
+}
+
+.error-state {
+  color: #a22f2f;
+}
+
+@media (min-width: 800px) {
+  .auth-shell {
+    grid-template-columns: minmax(22rem, 1.1fr) minmax(24rem, 0.9fr);
+  }
+
+  .brand-panel {
+    min-height: 100vh;
+  }
+}
