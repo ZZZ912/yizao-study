@@ -1,5 +1,11 @@
 name: yizao-study
 
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 services:
   db:
     image: postgres:17.8-bookworm
@@ -12,6 +18,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
+    mem_limit: 1400m
+    logging: *default-logging
     restart: unless-stopped
 
   backend:
@@ -33,6 +42,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 45s
+    stop_grace_period: 45s
+    mem_limit: 1400m
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
     restart: unless-stopped
 
   caddy:
@@ -55,6 +73,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
+    mem_limit: 256m
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
     restart: unless-stopped
 
 volumes:

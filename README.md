@@ -5,7 +5,7 @@
 ## 当前范围
 
 - Django 5.2 LTS、PostgreSQL、自定义用户模型、Session Cookie 登录、CSRF、Admin 与健康检查。
-- React、TypeScript、Vite、React Router、TanStack Query、登录页、空白仪表盘和基础 PWA。
+- React、TypeScript、Vite、React Router、TanStack Query、响应式应用壳、登录页和可控更新的基础 PWA。
 - 开发/生产 Compose、Gunicorn、Caddy 静态文件与反向代理、数据库备份恢复脚本。
 - 产品、架构、数据、内容、安全、API、路线图和关键 ADR。
 
@@ -67,10 +67,13 @@ pytest
 cd ../frontend
 pnpm typecheck
 pnpm build
+pnpm e2e
 
 cd ..
 bash scripts/check-secrets.sh
 ```
+
+CI 还会在 PostgreSQL 上运行后端测试，执行依赖审计、ShellCheck、Compose/Caddy 校验、固定版本 Gitleaks 全历史扫描、生产镜像构建，以及 360/390/768/1366/1440 视口的 Playwright 截图和横向溢出检查。截图只作为临时 CI Artifact 保存。
 
 ## 生产 Compose
 
@@ -79,6 +82,11 @@ bash scripts/check-secrets.sh
 ```bash
 cp .env.example .env
 docker compose --env-file .env -f docker-compose.prod.yml config
+docker build --target production -t yizao-backend:predeploy backend
+docker build -f deploy/caddy/Dockerfile -t yizao-caddy:predeploy .
+docker run --rm -e SITE_ADDRESS=example.com -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+docker compose --env-file .env -f docker-compose.prod.yml run --rm --no-deps --entrypoint python backend manage.py check --deploy --fail-level ERROR
+docker compose --env-file .env -f docker-compose.prod.yml run --rm --no-deps --entrypoint python backend manage.py migrate --check
 docker compose --env-file .env -f docker-compose.prod.yml up --build -d
 docker compose --env-file .env -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 ```
@@ -87,17 +95,25 @@ docker compose --env-file .env -f docker-compose.prod.yml exec backend python ma
 
 ## 数据库备份与恢复
 
-备份脚本通过生产 Compose 中的 PostgreSQL 容器执行 `pg_dump`，生成 gzip 压缩文件和 SHA256 校验文件，并按 `BACKUP_RETENTION_DAYS` 清理旧备份：
+备份脚本通过生产 Compose 中的 PostgreSQL 容器执行 `pg_dump`，生成 gzip 压缩文件和 SHA256 校验文件。默认保留 7 份日备份；每个 UTC 周日从日备份复制一份周备份并保留 4 份。`ENV_FILE`、`COMPOSE_FILE` 和 `BACKUP_DIR` 均可显式指定：
 
 ```bash
-bash scripts/backup-db.sh
+ENV_FILE=.env BACKUP_DIR=/srv/yizao-backups bash scripts/backup-db.sh
 ```
 
-恢复具有破坏性，必须提供明确确认值；恢复前会验证 SHA256 和 gzip 完整性：
+恢复具有破坏性，必须提供明确确认值。脚本会验证 SHA256 和 gzip 完整性、停止 Backend、创建恢复前安全备份、使用单事务导入，并在恢复后检查迁移与就绪状态：
 
 ```bash
-RESTORE_CONFIRM=restore bash scripts/restore-db.sh backups/yizao-study-YYYYMMDDTHHMMSSZ.sql.gz
+RESTORE_CONFIRM=restore ENV_FILE=.env bash scripts/restore-db.sh backups/daily/yizao-study-YYYYMMDDTHHMMSSZ.sql.gz
 ```
+
+可在隔离的临时 PostgreSQL 容器中执行“备份→修改→恢复→核对”演练：
+
+```bash
+bash scripts/test-backup-restore.sh
+```
+
+服务器本机备份不等于异地备份。正式运营前还需建立加密异地副本、监控和定期恢复记录。
 
 真实 `.env`、密钥和备份均被 Git 忽略，不应提交。
 

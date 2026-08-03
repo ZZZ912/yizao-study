@@ -38,6 +38,8 @@ Gunicorn + Django REST Framework
 - PostgreSQL 只加入内部 Compose 网络，使用命名卷持久化，初始最大连接数为 50。
 - Django 数据库连接使用有限的 `CONN_MAX_AGE`；生产数据库最大连接数保持保守，并为管理与备份预留容量。
 - 所有长期服务使用 `restart: unless-stopped` 和健康检查。
+- 4 GB 主机初始资源预算：Backend 1400 MB、PostgreSQL 1400 MB、Caddy 256 MB，剩余内存留给操作系统、Docker 和短时运维任务；达到 75% 持续使用率时先分析再调整。
+- 容器日志采用 `json-file` 轮转，每文件 10 MB、最多 3 份；Backend 使用只读根文件系统、受限 `/tmp` 和 `no-new-privileges`。
 
 ## 请求路径
 

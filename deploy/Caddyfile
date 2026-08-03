@@ -17,12 +17,15 @@
 		reverse_proxy backend:8000
 	}
 
+	redir /admin /admin/ 308
+
 	handle /admin/* {
 		reverse_proxy backend:8000
 	}
 
 	handle {
 		root * /srv/app
+		header Cache-Control "no-store, max-age=0"
 		try_files {path} /index.html
 		file_server
 	}
@@ -31,6 +34,7 @@
 		-Server
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
+		X-Robots-Tag "noindex, nofollow, noarchive"
 		Referrer-Policy same-origin
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
