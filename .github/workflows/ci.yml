@@ -60,7 +60,7 @@ jobs:
       - name: Run Django deployment checks
         run: python manage.py check --deploy --fail-level ERROR --settings=config.settings.production
         env:
-          DJANGO_SECRET_KEY: ci-deployment-check-secret-key-not-for-production
+          DJANGO_SECRET_KEY: "CI-only!Django-Deploy#Check_2026-A7v9Q2x8L4m6Z0p3N5s1K8d"
           DJANGO_ALLOWED_HOSTS: example.com
           DJANGO_CSRF_TRUSTED_ORIGINS: https://example.com
           DJANGO_SECURE_HSTS_SECONDS: 31536000
@@ -198,17 +198,32 @@ jobs:
           python manage.py shell --command "from accounts.models import User; User.objects.create_user(email='browser@example.com', password='Browser-test-password-2026', display_name='浏览器测试')"
       - name: Run real-browser checks
         run: |
+          pnpm --dir frontend build
           cd backend
           python manage.py runserver 127.0.0.1:8000 > /tmp/yizao-backend.log 2>&1 &
           backend_pid=$!
-          trap 'kill "$backend_pid" 2>/dev/null || true' EXIT
+          cd ..
+          docker run --detach --rm --name yizao-e2e-caddy --network host \
+            --env SITE_ADDRESS=http://127.0.0.1:4174 \
+            --env BACKEND_UPSTREAM=127.0.0.1:8000 \
+            --volume "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            --volume "$PWD/frontend/dist:/srv/app:ro" \
+            caddy:2.10.2-alpine
+          trap 'docker rm --force yizao-e2e-caddy >/dev/null 2>&1 || true; kill "$backend_pid" 2>/dev/null || true' EXIT
           for attempt in {1..30}; do
             curl --fail --silent http://127.0.0.1:8000/api/health/live/ >/dev/null && break
             if [[ "$attempt" == 30 ]]; then cat /tmp/yizao-backend.log; exit 1; fi
             sleep 1
           done
-          cd ../frontend
-          pnpm e2e || { cat /tmp/yizao-backend.log; exit 1; }
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:4174/ >/dev/null && break
+            if [[ "$attempt" == 30 ]]; then docker logs yizao-e2e-caddy; exit 1; fi
+            sleep 1
+          done
+          cd frontend
+          PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 \
+            E2E_EXPECT_CACHE_HEADERS=true \
+            pnpm e2e || { docker logs yizao-e2e-caddy; cat /tmp/yizao-backend.log; exit 1; }
       - name: Upload responsive screenshots and traces
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

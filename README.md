@@ -73,7 +73,7 @@ cd ..
 bash scripts/check-secrets.sh
 ```
 
-CI 还会在 PostgreSQL 上运行后端测试，执行依赖审计、ShellCheck、Compose/Caddy 校验、固定版本 Gitleaks 全历史扫描、生产镜像构建，以及 360/390/768/1366/1440 视口的 Playwright 截图和横向溢出检查。截图只作为临时 CI Artifact 保存。
+CI 还会在 PostgreSQL 上运行后端测试，执行依赖审计、ShellCheck、Compose/Caddy 校验、固定版本 Gitleaks 全历史扫描、生产镜像构建，以及 360/390/768/1366/1440 视口的 Playwright 截图、横向溢出和 CSS 200% 缩放重排模拟。截图只作为临时 CI Artifact 保存。
 
 ## 生产 Compose
 
@@ -106,6 +106,8 @@ ENV_FILE=.env BACKUP_DIR=/srv/yizao-backups bash scripts/backup-db.sh
 ```bash
 RESTORE_CONFIRM=restore ENV_FILE=.env bash scripts/restore-db.sh backups/daily/yizao-study-YYYYMMDDTHHMMSSZ.sql.gz
 ```
+
+单事务保证 SQL 导入失败时整体回滚。若导入后的迁移或就绪检查失败，脚本不会自动再次导入安全备份；应先保持维护状态、核查原因，再由运维人员明确执行恢复。
 
 可在隔离的临时 PostgreSQL 容器中执行“备份→修改→恢复→核对”演练：
 

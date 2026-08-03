@@ -19,6 +19,19 @@ test("login and logout work without a page refresh", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "登录学习空间" })).toBeVisible();
 });
 
+test("production proxy disables HTTP caching for API and Admin", async ({ request }) => {
+  test.skip(
+    process.env.E2E_EXPECT_CACHE_HEADERS !== "true",
+    "Requires the production Caddy proxy test harness.",
+  );
+  for (const path of ["/api/v1/auth/csrf/", "/api/v1/auth/me/", "/admin/login/"]) {
+    const response = await request.get(path);
+    const cacheControl = response.headers()["cache-control"] ?? "";
+    expect(cacheControl).toContain("no-store");
+    expect(cacheControl).toContain("max-age=0");
+  }
+});
+
 for (const width of [360, 390, 768, 1366, 1440]) {
   test(`layout has no horizontal overflow at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width < 1024 ? 844 : 900 });

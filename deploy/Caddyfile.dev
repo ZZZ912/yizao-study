@@ -2,12 +2,14 @@
 	encode zstd gzip
 
 	handle /api/* {
+		header >Cache-Control "no-store, max-age=0"
 		reverse_proxy backend:8000
 	}
 
 	redir /admin /admin/ 308
 
 	handle /admin/* {
+		header >Cache-Control "no-store, max-age=0"
 		reverse_proxy backend:8000
 	}
 
