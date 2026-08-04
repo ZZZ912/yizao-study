@@ -196,6 +196,10 @@ jobs:
         run: |
           python manage.py migrate --noinput
           python manage.py shell --command "from accounts.models import User; User.objects.create_user(email='browser@example.com', password='Browser-test-password-2026', display_name='浏览器测试')"
+          head -n 1 ../content/fixtures/original_demo_valid.jsonl > /tmp/yizao-e2e-question.jsonl
+          python manage.py import_content /tmp/yizao-e2e-question.jsonl --commit --report /tmp/yizao-e2e-import.json
+          printf 'demo-cost-001\n' > /tmp/yizao-e2e-question.ids
+          python manage.py publish_questions /tmp/yizao-e2e-question.ids --commit
       - name: Run real-browser checks
         run: |
           pnpm --dir frontend build

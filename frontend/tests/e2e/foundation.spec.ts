@@ -9,11 +9,12 @@ async function login(page: Page) {
   await page.getByLabel("密码").fill(password);
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { name: "学习空间" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /你好/ })).toBeVisible();
 }
 
 test("login and logout work without a page refresh", async ({ page }) => {
   await login(page);
+  await page.getByRole("link", { name: "我的", exact: true }).click();
   await page.getByRole("button", { name: "退出登录" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("heading", { name: "登录学习空间" })).toBeVisible();
@@ -61,14 +62,15 @@ test("drawer traps focus, closes with Escape, and restores focus", async ({ page
   await expect(trigger).toBeFocused();
 });
 
-test("dialog closes with Escape and restores focus", async ({ page }) => {
-  await page.setViewportSize({ width: 1366, height: 768 });
+test("a learner can submit a question and receive an explanation", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
-  const trigger = page.getByRole("button", { name: "关于" });
-  await trigger.click();
-  await expect(page.getByRole("dialog", { name: "关于一造学伴" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(trigger).toBeFocused();
+  await page.getByRole("link", { name: "刷题", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.locator(".option-button").first().click();
+  await page.getByRole("button", { name: "提交答案" }).click();
+  await expect(page.getByRole("heading", { name: "答案解析" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "下一题" })).toBeVisible();
 });
 
 test("layout remains usable at 200 percent zoom", async ({ page }) => {
