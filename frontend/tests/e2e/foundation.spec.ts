@@ -33,6 +33,19 @@ test("production proxy disables HTTP caching for API and Admin", async ({ reques
   }
 });
 
+test("fragmented study card leads into a completed lesson", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+  await page.getByRole("link", { name: "开始碎片学习" }).click();
+  await expect(page).toHaveURL(/\/quick-study$/);
+  await expect(page.getByRole("heading", { name: "碎片记忆卡" })).toBeVisible();
+  await page.getByRole("link", { name: "学习完整小节" }).click();
+  await page.getByRole("button", { name: "完成本节学习" }).click();
+  await expect(page.getByRole("button", { name: "✓ 本节已完成" })).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByText("100%", { exact: true }).first()).toBeVisible();
+});
+
 for (const width of [360, 390, 768, 1366, 1440]) {
   test(`layout has no horizontal overflow at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width < 1024 ? 844 : 900 });

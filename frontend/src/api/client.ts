@@ -7,10 +7,30 @@ export type User = {
 
 export type DashboardData = {
   exam: { date: string; days_remaining: number; location: string; specialty: string; syllabus: string };
-  today: { answered: number; correct: number; accuracy: number; due_reviews: number; target_questions: number };
+  today: {
+    answered: number;
+    correct: number;
+    accuracy: number;
+    due_reviews: number;
+    target_questions: number;
+    completed_lessons: number;
+  };
   question_count: number;
+  knowledge_count: number;
+  section_count: number;
+  completed_section_count: number;
+  course_progress: number;
   wrong_count: number;
-  next_section: null | { id: string; subject: string; chapter: string; title: string; question_count: number };
+  next_section: null | {
+    id: string;
+    subject: string;
+    chapter: string;
+    title: string;
+    question_count: number;
+    knowledge_count: number;
+    estimated_minutes: number;
+  };
+  quick_card: QuickCard | null;
 };
 
 export type SubjectSummary = {
@@ -19,12 +39,22 @@ export type SubjectSummary = {
   title: string;
   question_count: number;
   knowledge_count: number;
+  section_count: number;
+  completed_sections: number;
+  progress: number;
 };
 
 export type ChapterSummary = {
   number: number;
   title: string;
-  sections: Array<{ id: string; number: number; title: string; question_count: number; knowledge_count: number }>;
+  sections: Array<{
+    id: string;
+    number: number;
+    title: string;
+    question_count: number;
+    knowledge_count: number;
+    is_completed: boolean;
+  }>;
 };
 
 export type ContentBlock = { type: string; content: string };
@@ -42,6 +72,19 @@ export type SectionDetail = {
     content_blocks: ContentBlock[];
     exam_edition: string;
   }>;
+  progress: null | { status: "started" | "completed"; completed_at: string | null };
+};
+
+export type QuickCard = {
+  id: string;
+  title: string;
+  summary: string;
+  content_blocks: ContentBlock[];
+  subject: { code: string; title: string };
+  chapter: { number: number; title: string };
+  section: { id: string; title: string };
+  position: number;
+  total: number;
 };
 
 export type PracticeQuestion = {
@@ -226,6 +269,22 @@ export async function getChapters(subjectCode: string): Promise<{ subject: strin
 export async function getSection(sectionId: string): Promise<SectionDetail> {
   return (await request<DataResponse<SectionDetail>>(
     `/api/v1/learning/sections/${encodeURIComponent(sectionId)}/`,
+  )).data;
+}
+
+export async function updateSectionProgress(
+  sectionId: string,
+  status: "started" | "completed",
+): Promise<{ status: "started" | "completed"; completed_at: string | null }> {
+  return (await csrfMutation<DataResponse<{ status: "started" | "completed"; completed_at: string | null }>>(
+    `/api/v1/learning/sections/${encodeURIComponent(sectionId)}/progress/`,
+    { method: "POST", body: JSON.stringify({ status }) },
+  )).data;
+}
+
+export async function getQuickCard(offset: number): Promise<QuickCard | null> {
+  return (await request<DataResponse<QuickCard | null>>(
+    `/api/v1/learning/quick-card/?offset=${encodeURIComponent(String(offset))}`,
   )).data;
 }
 
