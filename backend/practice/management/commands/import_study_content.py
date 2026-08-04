@@ -135,6 +135,7 @@ class Command(BaseCommand):
                             "summary": point_data["summary"],
                             "blocks": point_data["blocks"],
                             "exam_edition": point_data.get("exam_edition", "2025大纲/2026考试"),
+                            "source_type": point_data.get("source_type", "original_synthesis"),
                         },
                         ensure_ascii=False,
                         sort_keys=True,
@@ -151,7 +152,7 @@ class Command(BaseCommand):
                         summary=point_data["summary"],
                         content_blocks=point_data["blocks"],
                         applicable_exam_edition=point_data.get("exam_edition", "2025大纲/2026考试"),
-                        source_type="original_synthesis",
+                        source_type=point_data.get("source_type", "original_synthesis"),
                         content_checksum=checksum,
                         review_status=KnowledgeVersion.ReviewStatus.PUBLISHED,
                     )

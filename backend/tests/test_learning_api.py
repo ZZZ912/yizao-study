@@ -144,6 +144,7 @@ def test_study_content_command_is_dry_by_default_and_idempotent_on_commit(tmp_pa
     point = KnowledgePoint.objects.get()
     assert point.versions.count() == 1
     assert point.current_version.review_status == KnowledgeVersion.ReviewStatus.PUBLISHED
+    assert point.current_version.source_type == "original_synthesis"
 
     updated = study_payload()
     updated["subjects"][0]["title"] = "建设工程技术与计量（土建）"
@@ -153,6 +154,18 @@ def test_study_content_command_is_dry_by_default_and_idempotent_on_commit(tmp_pa
     assert Subject.objects.get().title == "建设工程技术与计量（土建）"
     assert Section.objects.get().title == "岩体工程特征"
     assert point.versions.count() == 1
+
+
+@pytest.mark.django_db
+def test_study_content_preserves_private_reference_source_type(tmp_path):
+    payload = study_payload()
+    payload["knowledge_points"][0]["source_type"] = "private_course_reference"
+    path = tmp_path / "private-reference-study.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    call_command("import_study_content", path, commit=True)
+
+    assert KnowledgeVersion.objects.get().source_type == "private_course_reference"
 
 
 @pytest.mark.django_db
