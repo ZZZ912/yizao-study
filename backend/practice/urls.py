@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     ChapterListView,
     DashboardView,
+    LearningReportView,
     NextQuestionView,
     QuickCardView,
     SectionDetailView,
@@ -28,6 +29,7 @@ urlpatterns = [
         name="learning-section-progress",
     ),
     path("quick-card/", QuickCardView.as_view(), name="learning-quick-card"),
+    path("report/", LearningReportView.as_view(), name="learning-report"),
     path("questions/next/", NextQuestionView.as_view(), name="practice-next"),
     path("attempts/", SubmitAttemptView.as_view(), name="practice-submit"),
     path(
