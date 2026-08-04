@@ -9,6 +9,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PracticePage } from "./pages/PracticePage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { QuickStudyPage } from "./pages/QuickStudyPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { SectionPage } from "./pages/SectionPage";
 import { StudyPage } from "./pages/StudyPage";
@@ -30,6 +31,7 @@ function AuthenticatedApp() {
       <Route path="/study" element={<StudyPage />} />
       <Route path="/study/:subjectCode" element={<ChaptersPage />} />
       <Route path="/study/section/:sectionId" element={<SectionPage />} />
+      <Route path="/quick-study" element={<QuickStudyPage />} />
       <Route path="/practice" element={<PracticePage />} />
       <Route path="/review" element={<ReviewPage />} />
       <Route path="/profile" element={<ProfilePage user={currentUser.data} />} />

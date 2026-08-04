@@ -46,6 +46,7 @@ def validate_payload(payload: object) -> dict:
                 "warning",
                 "comparison",
                 "mnemonic",
+                "inline_quiz",
                 "summary",
             }:
                 raise BaseStudyContentError(f"knowledge_points[{index}] has an invalid block.")
@@ -85,18 +86,27 @@ class Command(BaseCommand):
                         code=subject_data["code"],
                         defaults={"title": subject_data["title"]},
                     )
+                    if subject.title != subject_data["title"]:
+                        subject.title = subject_data["title"]
+                        subject.save(update_fields=("title",))
                     for chapter_data in subject_data["chapters"]:
                         chapter, _ = Chapter.objects.get_or_create(
                             subject=subject,
                             number=chapter_data["number"],
                             defaults={"title": chapter_data["title"]},
                         )
+                        if chapter.title != chapter_data["title"]:
+                            chapter.title = chapter_data["title"]
+                            chapter.save(update_fields=("title",))
                         for section_data in chapter_data["sections"]:
                             section, _ = Section.objects.get_or_create(
                                 chapter=chapter,
                                 number=section_data["number"],
                                 defaults={"title": section_data["title"]},
                             )
+                            if section.title != section_data["title"]:
+                                section.title = section_data["title"]
+                                section.save(update_fields=("title",))
                             section_map[(subject.code, chapter.number, section.number)] = section
 
                 created = versioned = skipped = 0

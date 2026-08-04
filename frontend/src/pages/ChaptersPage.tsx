@@ -24,7 +24,7 @@ export function ChaptersPage() {
                 {chapter.sections.map((section) => (
                   <Link to={`/study/section/${section.id}`} className="section-row" key={section.id}>
                     <span>{chapter.number}.{section.number}</span>
-                    <strong>{section.title}</strong>
+                    <strong>{section.title} {section.is_completed && <em className="completion-mark">已完成</em>}</strong>
                     <small>{section.knowledge_count} 个精讲点 · {section.question_count} 题</small>
                   </Link>
                 ))}

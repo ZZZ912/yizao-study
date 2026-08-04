@@ -19,6 +19,10 @@ export function StudyPage() {
               <div>
                 <h2>{subject.title}</h2>
                 <p>{subject.knowledge_count} 个精讲点 · {subject.question_count} 道已复核题</p>
+                <div className="subject-progress">
+                  <progress value={subject.completed_sections} max={subject.section_count || 1} />
+                  <small>{subject.progress}% · {subject.completed_sections}/{subject.section_count}节</small>
+                </div>
               </div>
               <span aria-hidden="true">→</span>
             </Link>

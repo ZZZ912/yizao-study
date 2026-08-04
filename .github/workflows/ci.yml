@@ -200,6 +200,7 @@ jobs:
           python manage.py import_content /tmp/yizao-e2e-question.jsonl --commit --report /tmp/yizao-e2e-import.json
           printf 'demo-cost-001\n' > /tmp/yizao-e2e-question.ids
           python manage.py publish_questions /tmp/yizao-e2e-question.ids --commit
+          python manage.py import_study_content ../content/fixtures/original_study_content.json --commit
       - name: Run real-browser checks
         run: |
           pnpm --dir frontend build

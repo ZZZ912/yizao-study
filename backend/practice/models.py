@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+from curriculum.models import Section
 from questions.models import Question, QuestionVersion
 
 
@@ -80,3 +81,34 @@ class WrongQuestion(models.Model):
             )
         ]
         indexes = [models.Index(fields=("user", "status", "next_review_at"))]
+
+
+class SectionProgress(models.Model):
+    class Status(models.TextChoices):
+        STARTED = "started", "学习中"
+        COMPLETED = "completed", "已完成"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="section_progress",
+    )
+    section = models.ForeignKey(
+        Section,
+        on_delete=models.PROTECT,
+        related_name="learner_progress",
+    )
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.STARTED)
+    first_opened_at = models.DateTimeField(auto_now_add=True)
+    last_opened_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "practice_section_progress"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "section"), name="section_progress_user_section_uq"
+            )
+        ]
+        indexes = [models.Index(fields=("user", "status", "last_opened_at"))]
