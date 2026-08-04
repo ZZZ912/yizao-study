@@ -22,8 +22,9 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 FROM runtime-base AS production
 
+ARG PIP_INDEX_URL=https://pypi.org/simple
 COPY requirements/base.txt /tmp/requirements/base.txt
-RUN python -m pip install --requirement /tmp/requirements/base.txt
+RUN python -m pip install --index-url "$PIP_INDEX_URL" --requirement /tmp/requirements/base.txt
 
 COPY --chown=app:app . /app
 RUN chmod 0555 /app/docker-entrypoint.sh
