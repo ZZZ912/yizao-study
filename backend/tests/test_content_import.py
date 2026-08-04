@@ -64,6 +64,20 @@ def test_idempotent_repeat_skips_same_checksum(tmp_path):
 
 
 @pytest.mark.django_db
+def test_official_subject_title_reuses_canonical_curriculum_subject(tmp_path):
+    pricing = Subject.objects.create(code="pricing", title="建设工程计价")
+    record = demo_question(external_id="pricing-canonical-001")
+    record["subject"] = "建设工程计价"
+    path = write_jsonl(tmp_path / "pricing.jsonl", [record])
+
+    call_command("import_content", path, commit=True, report=tmp_path / "report.json")
+
+    question = Question.objects.get()
+    assert question.subject == pricing
+    assert Subject.objects.count() == 1
+
+
+@pytest.mark.django_db
 def test_changed_content_creates_new_version_without_overwriting_old(tmp_path):
     first = demo_question()
     path = write_jsonl(tmp_path / "first.jsonl", [first])
