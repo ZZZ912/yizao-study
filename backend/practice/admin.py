@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AnswerAttempt, WrongQuestion
+from .models import AnswerAttempt, SectionProgress, WrongQuestion
 
 
 @admin.register(AnswerAttempt)
@@ -16,3 +16,11 @@ class WrongQuestionAdmin(admin.ModelAdmin):
     list_display = ("user", "question", "status", "wrong_count", "next_review_at")
     list_filter = ("status", "next_review_at")
     search_fields = ("user__email", "question__external_id")
+
+
+@admin.register(SectionProgress)
+class SectionProgressAdmin(admin.ModelAdmin):
+    list_display = ("user", "section", "status", "last_opened_at", "completed_at")
+    list_filter = ("status", "last_opened_at")
+    search_fields = ("user__email", "section__title", "section__chapter__title")
+    readonly_fields = ("first_opened_at", "last_opened_at", "completed_at")

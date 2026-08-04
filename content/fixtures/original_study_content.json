@@ -1,0 +1,31 @@
+{
+  "subjects": [
+    {
+      "code": "subject-7c15fdb37d11",
+      "title": "原创工程计价演示",
+      "chapters": [
+        {
+          "number": 1,
+          "title": "原创基础概念",
+          "sections": [{"number": 1, "title": "计价边界"}]
+        }
+      ]
+    }
+  ],
+  "knowledge_points": [
+    {
+      "subject_code": "subject-7c15fdb37d11",
+      "chapter": 1,
+      "section": 1,
+      "code": "original-demo-boundary",
+      "title": "先确定计价边界",
+      "summary": "原创演示内容：计算前先统一范围、时点和单位。",
+      "sort_order": 1,
+      "blocks": [
+        {"type": "key_point", "content": "范围、时点和单位一致，金额才具有可比性。"},
+        {"type": "warning", "content": "不要把不同计价口径的金额直接相加。"},
+        {"type": "summary", "content": "先看边界，再列计算式，最后核对单位。"}
+      ]
+    }
+  ]
+}
