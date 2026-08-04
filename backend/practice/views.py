@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, timedelta
 
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef, Q, Sum
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -73,6 +73,154 @@ def quick_card_payload(*, user, offset=0):
         "section": {"id": str(point.section_id), "title": point.section.title},
         "position": offset + 1,
         "total": total,
+    }
+
+
+def learning_report_payload(user):
+    now = timezone.localtime()
+    attempts = AnswerAttempt.objects.filter(user=user)
+    total_attempts = attempts.count()
+    correct_attempts = attempts.filter(is_correct=True).count()
+    attempted_questions = attempts.values("question_version__question_id").distinct().count()
+    wrong_records = WrongQuestion.objects.filter(user=user)
+    content_sections = published_sections()
+    completed_sections = SectionProgress.objects.filter(
+        user=user,
+        status=SectionProgress.Status.COMPLETED,
+        section__in=content_sections,
+    )
+
+    subject_rows = []
+    for subject in Subject.objects.filter(is_active=True).order_by("code"):
+        subject_attempts = attempts.filter(question_version__question__subject=subject)
+        subject_total = subject_attempts.count()
+        subject_correct = subject_attempts.filter(is_correct=True).count()
+        subject_questions = published_questions().filter(subject=subject).count()
+        subject_sections = content_sections.filter(chapter__subject=subject)
+        completed_count = completed_sections.filter(section__in=subject_sections).count()
+        subject_rows.append(
+            {
+                "code": subject.code,
+                "title": subject.title,
+                "question_count": subject_questions,
+                "attempted_questions": subject_attempts.values("question_version__question_id")
+                .distinct()
+                .count(),
+                "attempt_count": subject_total,
+                "correct_count": subject_correct,
+                "accuracy": round(subject_correct / subject_total * 100) if subject_total else 0,
+                "wrong_count": wrong_records.filter(question__subject=subject).count(),
+                "section_count": subject_sections.count(),
+                "completed_sections": completed_count,
+                "course_progress": (
+                    round(completed_count / subject_sections.count() * 100)
+                    if subject_sections.count()
+                    else 0
+                ),
+            }
+        )
+
+    weak_rows = (
+        attempts.values(
+            "question_version__question__section_id",
+            "question_version__question__section__title",
+            "question_version__question__section__chapter__subject__title",
+        )
+        .annotate(
+            attempt_count=Count("id"),
+            wrong_count=Count("id", filter=Q(is_correct=False)),
+            correct_count=Count("id", filter=Q(is_correct=True)),
+        )
+        .filter(wrong_count__gt=0)
+        .order_by("-wrong_count", "-attempt_count")[:8]
+    )
+    weak_sections = [
+        {
+            "section_id": str(row["question_version__question__section_id"]),
+            "subject": row["question_version__question__section__chapter__subject__title"],
+            "section": row["question_version__question__section__title"],
+            "attempt_count": row["attempt_count"],
+            "wrong_count": row["wrong_count"],
+            "accuracy": round(row["correct_count"] / row["attempt_count"] * 100),
+        }
+        for row in weak_rows
+    ]
+
+    reason_labels = dict(AnswerAttempt.WrongReason.choices)
+    reason_rows = (
+        attempts.filter(is_correct=False)
+        .exclude(wrong_reason="")
+        .values("wrong_reason")
+        .annotate(count=Count("id"))
+        .order_by("-count", "wrong_reason")
+    )
+    wrong_reasons = [
+        {
+            "code": row["wrong_reason"],
+            "label": reason_labels.get(row["wrong_reason"], row["wrong_reason"]),
+            "count": row["count"],
+        }
+        for row in reason_rows
+    ]
+
+    activity = []
+    for day_offset in range(13, -1, -1):
+        activity_date = now.date() - timedelta(days=day_offset)
+        day_attempts = attempts.filter(created_at__date=activity_date)
+        activity.append(
+            {
+                "date": activity_date.isoformat(),
+                "answered": day_attempts.count(),
+                "correct": day_attempts.filter(is_correct=True).count(),
+                "completed_lessons": completed_sections.filter(
+                    completed_at__date=activity_date
+                ).count(),
+            }
+        )
+
+    recent_attempts = attempts.select_related(
+        "question_version__question__subject",
+        "question_version__question__section",
+    ).order_by("-created_at")[:50]
+    return {
+        "overview": {
+            "question_count": published_questions().count(),
+            "attempted_questions": attempted_questions,
+            "attempt_count": total_attempts,
+            "correct_count": correct_attempts,
+            "accuracy": round(correct_attempts / total_attempts * 100) if total_attempts else 0,
+            "study_minutes": round(
+                (attempts.aggregate(total=Sum("elapsed_seconds"))["total"] or 0) / 60
+            ),
+            "active_wrong": wrong_records.filter(status=WrongQuestion.Status.ACTIVE).count(),
+            "mastered_wrong": wrong_records.filter(status=WrongQuestion.Status.MASTERED).count(),
+            "due_reviews": wrong_records.filter(
+                status=WrongQuestion.Status.ACTIVE,
+                next_review_at__lte=now,
+            ).count(),
+            "completed_sections": completed_sections.count(),
+            "section_count": content_sections.count(),
+        },
+        "subjects": subject_rows,
+        "weak_sections": weak_sections,
+        "wrong_reasons": wrong_reasons,
+        "activity": activity,
+        "recent_attempts": [
+            {
+                "id": str(attempt.id),
+                "question_id": str(attempt.question_version.question_id),
+                "stem": attempt.question_version.stem,
+                "subject": attempt.question_version.question.subject.title,
+                "section": attempt.question_version.question.section.title,
+                "selected_answer": attempt.selected_answer,
+                "correct_answer": attempt.question_version.canonical_answer,
+                "is_correct": attempt.is_correct,
+                "elapsed_seconds": attempt.elapsed_seconds,
+                "wrong_reason": attempt.wrong_reason,
+                "created_at": attempt.created_at.isoformat(),
+            }
+            for attempt in recent_attempts
+        ],
     }
 
 
@@ -242,6 +390,12 @@ class ChapterListView(APIView):
             sections = []
             for section in chapter.sections.all():
                 question_count = published_questions().filter(section=section).count()
+                section_attempts = AnswerAttempt.objects.filter(
+                    user=request.user,
+                    question_version__question__section=section,
+                )
+                attempt_count = section_attempts.count()
+                correct_count = section_attempts.filter(is_correct=True).count()
                 knowledge_count = KnowledgePoint.objects.filter(
                     section=section,
                     current_version__review_status=KnowledgeVersion.ReviewStatus.PUBLISHED,
@@ -252,6 +406,21 @@ class ChapterListView(APIView):
                         "number": section.number,
                         "title": section.title,
                         "question_count": question_count,
+                        "attempted_questions": section_attempts.values(
+                            "question_version__question_id"
+                        )
+                        .distinct()
+                        .count(),
+                        "attempt_count": attempt_count,
+                        "correct_count": correct_count,
+                        "accuracy": round(correct_count / attempt_count * 100)
+                        if attempt_count
+                        else 0,
+                        "wrong_count": WrongQuestion.objects.filter(
+                            user=request.user,
+                            question__section=section,
+                            status=WrongQuestion.Status.ACTIVE,
+                        ).count(),
                         "knowledge_count": knowledge_count,
                         "is_completed": SectionProgress.objects.filter(
                             user=request.user,
@@ -265,6 +434,9 @@ class ChapterListView(APIView):
                     "number": chapter.number,
                     "title": chapter.title,
                     "sections": sections,
+                    "question_count": sum(item["question_count"] for item in sections),
+                    "attempted_questions": sum(item["attempted_questions"] for item in sections),
+                    "wrong_count": sum(item["wrong_count"] for item in sections),
                 }
             )
         return Response({"data": {"subject": subject.title, "chapters": data}})
@@ -356,6 +528,13 @@ class QuickCardView(APIView):
         return Response({"data": quick_card_payload(user=request.user, offset=offset)})
 
 
+class LearningReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({"data": learning_report_payload(request.user)})
+
+
 class NextQuestionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -368,13 +547,19 @@ class NextQuestionView(APIView):
             queryset = queryset.filter(subject__code=subject_code)
         if section_id:
             queryset = queryset.filter(section_id=section_id)
-        if mode == "review":
+        if mode in {"review", "wrong"}:
             due_ids = WrongQuestion.objects.filter(
                 user=request.user,
                 status=WrongQuestion.Status.ACTIVE,
-                next_review_at__lte=timezone.now(),
+                **({"next_review_at__lte": timezone.now()} if mode == "review" else {}),
             ).values("question_id")
             queryset = queryset.filter(id__in=due_ids)
+        elif mode == "random":
+            attempted = AnswerAttempt.objects.filter(
+                user=request.user,
+                question_version__question_id=OuterRef("pk"),
+            )
+            queryset = queryset.annotate(attempted=Exists(attempted)).order_by("attempted", "?")
         else:
             attempted = AnswerAttempt.objects.filter(
                 user=request.user,

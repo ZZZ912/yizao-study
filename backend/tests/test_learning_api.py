@@ -103,6 +103,47 @@ def test_dashboard_and_subject_endpoints_use_only_published_content(api_client, 
     assert subjects.json()["data"][0]["question_count"] == 1
 
 
+@pytest.mark.django_db
+def test_learning_report_and_chapter_stats_explain_progress(
+    api_client, learner, published_question
+):
+    version_id = str(published_question.current_version_id)
+    response = api_client.post(
+        "/api/v1/learning/attempts/",
+        {
+            "question_version_id": version_id,
+            "selected_answer": ["B"],
+            "elapsed_seconds": 90,
+            "wrong_reason": "concept",
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    report = api_client.get("/api/v1/learning/report/")
+    assert report.status_code == 200
+    data = report.json()["data"]
+    assert data["overview"]["attempt_count"] == 1
+    assert data["overview"]["attempted_questions"] == 1
+    assert data["overview"]["active_wrong"] == 1
+    assert data["overview"]["study_minutes"] == 2
+    assert data["subjects"][0]["attempt_count"] == 1
+    assert data["weak_sections"][0]["wrong_count"] == 1
+    assert data["wrong_reasons"] == [{"code": "concept", "label": "概念不清", "count": 1}]
+    assert data["recent_attempts"][0]["is_correct"] is False
+    assert len(data["activity"]) == 14
+
+    chapters = api_client.get(
+        f"/api/v1/learning/subjects/{published_question.subject.code}/chapters/"
+    )
+    assert chapters.status_code == 200
+    section = chapters.json()["data"]["chapters"][0]["sections"][0]
+    assert section["question_count"] == 1
+    assert section["attempted_questions"] == 1
+    assert section["wrong_count"] == 1
+    assert section["accuracy"] == 0
+
+
 def study_payload():
     return {
         "subjects": [

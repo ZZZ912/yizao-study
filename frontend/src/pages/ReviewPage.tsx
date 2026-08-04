@@ -10,7 +10,7 @@ export function ReviewPage() {
   return (
     <AppShell>
       <main className="dashboard-shell narrow-content">
-        <PageHeader eyebrow="错题复习" title="今日复习" actions={<Link className="button" to="/practice?mode=review">开始到期复习</Link>} />
+        <PageHeader eyebrow="错题复习" title="今日复习" actions={<Link className="button" to="/practice/session?mode=review">开始到期复习</Link>} />
         <p className="page-intro">答错后第 1、2、4、7 天逐步巩固；连续答对三次后转为已掌握。</p>
         <div className="wrong-list">
           {wrong.data?.map((item) => (

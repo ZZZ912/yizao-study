@@ -19,13 +19,13 @@ export function ChaptersPage() {
         <div className="chapter-list">
           {chapters.data?.chapters.map((chapter) => (
             <section className="chapter-group" key={chapter.number}>
-              <header><span>第{chapter.number}章</span><h2>{chapter.title}</h2></header>
+              <header><span>第{chapter.number}章</span><h2>{chapter.title}</h2><small>{chapter.attempted_questions}/{chapter.question_count}题已做 · {chapter.wrong_count}错题</small></header>
               <div>
                 {chapter.sections.map((section) => (
                   <Link to={`/study/section/${section.id}`} className="section-row" key={section.id}>
                     <span>{chapter.number}.{section.number}</span>
                     <strong>{section.title} {section.is_completed && <em className="completion-mark">已完成</em>}</strong>
-                    <small>{section.knowledge_count} 个精讲点 · {section.question_count} 题</small>
+                    <small>{section.knowledge_count}个精讲点 · {section.attempted_questions}/{section.question_count}题已做 · {section.wrong_count}错题 · {section.attempt_count ? `正确率${section.accuracy}%` : "尚未练习"}</small>
                   </Link>
                 ))}
               </div>

@@ -79,7 +79,7 @@ export function SectionPage() {
                 >
                   {section.data.progress?.status === "completed" ? "✓ 本节已完成" : "完成本节学习"}
                 </button>
-                <Link className="button" to={`/practice?section=${section.data.id}`}>练本节题目</Link>
+                <Link className="button" to={`/practice/session?section=${section.data.id}`}>练本节题目</Link>
               </aside>
             </div>
           </>

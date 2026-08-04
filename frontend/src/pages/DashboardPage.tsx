@@ -53,7 +53,7 @@ export function DashboardPage({ user }: { user: User }) {
                   {dashboard.data.next_section && (
                     <Link className="button button--secondary" to={`/study/section/${dashboard.data.next_section.id}`}>先学重难点</Link>
                   )}
-                  <Link className="button" to="/practice">开始今日20题</Link>
+                  <Link className="button" to="/practice/session?mode=daily&target=20">开始今日20题</Link>
                 </div>
               </Card>
               <Card className="daily-plan-card">
@@ -87,7 +87,7 @@ export function DashboardPage({ user }: { user: User }) {
                   <p className="eyebrow">今日到期</p>
                   <h2>{dashboard.data.today.due_reviews} 道错题</h2>
                   <p>按1/2/4/7天间隔复习。</p>
-                  <Link to="/practice?mode=review">开始复习</Link>
+                  <Link to="/practice/session?mode=review">开始复习</Link>
                 </Card>
                 <Card className="compact-task">
                   <p className="eyebrow">可学内容</p>

@@ -47,13 +47,78 @@ export type SubjectSummary = {
 export type ChapterSummary = {
   number: number;
   title: string;
+  question_count: number;
+  attempted_questions: number;
+  wrong_count: number;
   sections: Array<{
     id: string;
     number: number;
     title: string;
     question_count: number;
+    attempted_questions: number;
+    attempt_count: number;
+    correct_count: number;
+    accuracy: number;
+    wrong_count: number;
     knowledge_count: number;
     is_completed: boolean;
+  }>;
+};
+
+export type LearningReport = {
+  overview: {
+    question_count: number;
+    attempted_questions: number;
+    attempt_count: number;
+    correct_count: number;
+    accuracy: number;
+    study_minutes: number;
+    active_wrong: number;
+    mastered_wrong: number;
+    due_reviews: number;
+    completed_sections: number;
+    section_count: number;
+  };
+  subjects: Array<{
+    code: string;
+    title: string;
+    question_count: number;
+    attempted_questions: number;
+    attempt_count: number;
+    correct_count: number;
+    accuracy: number;
+    wrong_count: number;
+    section_count: number;
+    completed_sections: number;
+    course_progress: number;
+  }>;
+  weak_sections: Array<{
+    section_id: string;
+    subject: string;
+    section: string;
+    attempt_count: number;
+    wrong_count: number;
+    accuracy: number;
+  }>;
+  wrong_reasons: Array<{ code: string; label: string; count: number }>;
+  activity: Array<{
+    date: string;
+    answered: number;
+    correct: number;
+    completed_lessons: number;
+  }>;
+  recent_attempts: Array<{
+    id: string;
+    question_id: string;
+    stem: string;
+    subject: string;
+    section: string;
+    selected_answer: string[];
+    correct_answer: string[];
+    is_correct: boolean;
+    elapsed_seconds: number;
+    wrong_reason: string;
+    created_at: string;
   }>;
 };
 
@@ -286,6 +351,10 @@ export async function getQuickCard(offset: number): Promise<QuickCard | null> {
   return (await request<DataResponse<QuickCard | null>>(
     `/api/v1/learning/quick-card/?offset=${encodeURIComponent(String(offset))}`,
   )).data;
+}
+
+export async function getLearningReport(): Promise<LearningReport> {
+  return (await request<DataResponse<LearningReport>>("/api/v1/learning/report/")).data;
 }
 
 export async function getNextQuestion(params: { subject?: string; section?: string; mode?: string }): Promise<PracticeQuestion | null> {
