@@ -144,6 +144,7 @@ def test_study_content_command_is_dry_by_default_and_idempotent_on_commit(tmp_pa
     point = KnowledgePoint.objects.get()
     assert point.versions.count() == 1
     assert point.current_version.review_status == KnowledgeVersion.ReviewStatus.PUBLISHED
+    assert point.current_version.source_type == "original_synthesis"
 
     updated = study_payload()
     updated["subjects"][0]["title"] = "建设工程技术与计量（土建）"
@@ -153,6 +154,18 @@ def test_study_content_command_is_dry_by_default_and_idempotent_on_commit(tmp_pa
     assert Subject.objects.get().title == "建设工程技术与计量（土建）"
     assert Section.objects.get().title == "岩体工程特征"
     assert point.versions.count() == 1
+
+
+@pytest.mark.django_db
+def test_study_content_preserves_private_reference_source_type(tmp_path):
+    payload = study_payload()
+    payload["knowledge_points"][0]["source_type"] = "private_course_reference"
+    path = tmp_path / "private-reference-study.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    call_command("import_study_content", path, commit=True)
+
+    assert KnowledgeVersion.objects.get().source_type == "private_course_reference"
 
 
 @pytest.mark.django_db
@@ -186,6 +199,26 @@ def test_quick_card_and_section_progress_feed_the_daily_plan(api_client, learner
     assert dashboard["completed_section_count"] == 1
     assert dashboard["course_progress"] == 100
     assert dashboard["today"]["completed_lessons"] == 1
+
+
+@pytest.mark.django_db
+def test_inactive_knowledge_is_excluded_from_learning_endpoints(api_client, tmp_path):
+    path = tmp_path / "study.private.json"
+    path.write_text(json.dumps(study_payload(), ensure_ascii=False), encoding="utf-8")
+    call_command("import_study_content", path, commit=True)
+    point = KnowledgePoint.objects.get()
+    point.is_active = False
+    point.save(update_fields=("is_active",))
+
+    assert api_client.get("/api/v1/learning/quick-card/").json()["data"] is None
+    dashboard = api_client.get("/api/v1/learning/dashboard/").json()["data"]
+    assert dashboard["knowledge_count"] == 0
+    assert dashboard["section_count"] == 0
+    subject = api_client.get("/api/v1/learning/subjects/").json()["data"][0]
+    assert subject["knowledge_count"] == 0
+    assert subject["section_count"] == 0
+    section = api_client.get(f"/api/v1/learning/sections/{point.section_id}/").json()["data"]
+    assert section["knowledge_points"] == []
 
 
 @pytest.mark.django_db

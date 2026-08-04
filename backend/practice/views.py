@@ -26,12 +26,14 @@ def published_questions():
 
 def published_knowledge_points():
     return KnowledgePoint.objects.filter(
+        is_active=True,
         current_version__review_status=KnowledgeVersion.ReviewStatus.PUBLISHED,
     ).select_related("section__chapter__subject", "current_version")
 
 
 def published_sections():
     return Section.objects.filter(
+        knowledge_points__is_active=True,
         knowledge_points__current_version__review_status=KnowledgeVersion.ReviewStatus.PUBLISHED,
     ).distinct()
 
@@ -113,9 +115,10 @@ class DashboardView(APIView):
                 knowledge_count=Count(
                     "knowledge_points",
                     filter=Q(
+                        knowledge_points__is_active=True,
                         knowledge_points__current_version__review_status=(
                             KnowledgeVersion.ReviewStatus.PUBLISHED
-                        )
+                        ),
                     ),
                     distinct=True,
                 ),
@@ -132,7 +135,11 @@ class DashboardView(APIView):
                         filter=Q(questions__status=Question.Status.PUBLISHED),
                         distinct=True,
                     ),
-                    knowledge_count=Count("knowledge_points", distinct=True),
+                    knowledge_count=Count(
+                        "knowledge_points",
+                        filter=Q(knowledge_points__is_active=True),
+                        distinct=True,
+                    ),
                 )
                 .select_related("chapter__subject")
                 .order_by("chapter__subject__code", "chapter__number", "number")
@@ -198,9 +205,10 @@ class SubjectListView(APIView):
             knowledge_count=Count(
                 "chapters__sections__knowledge_points",
                 filter=Q(
+                    chapters__sections__knowledge_points__is_active=True,
                     chapters__sections__knowledge_points__current_version__review_status=(
                         KnowledgeVersion.ReviewStatus.PUBLISHED
-                    )
+                    ),
                 ),
                 distinct=True,
             ),
@@ -244,6 +252,7 @@ class ChapterListView(APIView):
                 question_count = published_questions().filter(section=section).count()
                 knowledge_count = KnowledgePoint.objects.filter(
                     section=section,
+                    is_active=True,
                     current_version__review_status=KnowledgeVersion.ReviewStatus.PUBLISHED,
                 ).count()
                 sections.append(
@@ -279,6 +288,7 @@ class SectionDetailView(APIView):
             raise NotFound("小节不存在。")
         points = KnowledgePoint.objects.filter(
             section=section,
+            is_active=True,
             current_version__review_status=KnowledgeVersion.ReviewStatus.PUBLISHED,
         ).select_related("current_version")
         return Response(
