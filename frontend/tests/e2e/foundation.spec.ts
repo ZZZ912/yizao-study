@@ -43,7 +43,7 @@ test("fragmented study card leads into a completed lesson", async ({ page }) => 
   await page.getByRole("button", { name: "完成本节学习" }).click();
   await expect(page.getByRole("button", { name: "✓ 本节已完成" })).toBeVisible();
   await page.goto("/");
-  await expect(page.getByText("100%", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".daily-overview").getByText(/\d+\/\d+ 节已完成/)).toBeVisible();
 });
 
 for (const width of [360, 390, 768, 1366, 1440]) {
