@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "knowledge",
     "questions",
     "provenance",
+    "practice",
 ]
 
 MIDDLEWARE = [
