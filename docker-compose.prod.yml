@@ -27,6 +27,8 @@ services:
     build:
       context: ./backend
       target: production
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     env_file: ${ENV_FILE:-.env}
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
@@ -57,6 +59,8 @@ services:
     build:
       context: .
       dockerfile: deploy/caddy/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     env_file: ${ENV_FILE:-.env}
     ports:
       - "80:80"
