@@ -202,6 +202,26 @@ def test_quick_card_and_section_progress_feed_the_daily_plan(api_client, learner
 
 
 @pytest.mark.django_db
+def test_inactive_knowledge_is_excluded_from_learning_endpoints(api_client, tmp_path):
+    path = tmp_path / "study.private.json"
+    path.write_text(json.dumps(study_payload(), ensure_ascii=False), encoding="utf-8")
+    call_command("import_study_content", path, commit=True)
+    point = KnowledgePoint.objects.get()
+    point.is_active = False
+    point.save(update_fields=("is_active",))
+
+    assert api_client.get("/api/v1/learning/quick-card/").json()["data"] is None
+    dashboard = api_client.get("/api/v1/learning/dashboard/").json()["data"]
+    assert dashboard["knowledge_count"] == 0
+    assert dashboard["section_count"] == 0
+    subject = api_client.get("/api/v1/learning/subjects/").json()["data"][0]
+    assert subject["knowledge_count"] == 0
+    assert subject["section_count"] == 0
+    section = api_client.get(f"/api/v1/learning/sections/{point.section_id}/").json()["data"]
+    assert section["knowledge_points"] == []
+
+
+@pytest.mark.django_db
 def test_published_knowledge_version_is_immutable(tmp_path):
     path = tmp_path / "study.private.json"
     path.write_text(json.dumps(study_payload(), ensure_ascii=False), encoding="utf-8")
