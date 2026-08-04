@@ -34,6 +34,12 @@ media/
 logs/
 backups/*
 !backups/.gitkeep
+private-data/
+source-materials/
+extracted-content/
+import-reports/private/
+*.private.jsonl
+*.commercial.jsonl
 *.sql
 *.sql.gz
 *.dump

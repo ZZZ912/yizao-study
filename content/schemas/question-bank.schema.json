@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yizao-study.local/schemas/question-bank.schema.json",
+  "title": "Yizao question bank",
+  "type": "array",
+  "items": {"$ref": "question.schema.json"}
+}

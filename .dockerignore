@@ -14,3 +14,11 @@ backend/db.sqlite3
 backend/staticfiles
 backups
 docs
+private-data
+source-materials
+extracted-content
+import-reports
+*.private.jsonl
+*.commercial.jsonl
+*.pdf
+*.zip

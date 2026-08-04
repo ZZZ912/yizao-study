@@ -8,9 +8,21 @@ forbidden_files="$(
         || true
 )"
 
+private_content_files="$(
+    git ls-files \
+        | grep -Ei '(^|/)(private-data|source-materials|extracted-content|import-reports/private)/|section_questions_raw\.jsonl$|\.(pdf|zip)$|\.(private|commercial)\.jsonl$' \
+        || true
+)"
+
 if [[ -n "$forbidden_files" ]]; then
     echo "Forbidden secret-bearing file names are tracked:" >&2
     echo "$forbidden_files" >&2
+    exit 1
+fi
+
+if [[ -n "$private_content_files" ]]; then
+    echo "Private or commercial content files are tracked:" >&2
+    echo "$private_content_files" >&2
     exit 1
 fi
 
