@@ -203,6 +203,14 @@ def validate_jsonl(path: str | Path) -> ValidationResult:
 
 
 def _subject_code(title: str) -> str:
+    canonical_codes = {
+        "建设工程造价管理": "management",
+        "建设工程计价": "pricing",
+        "建设工程技术与计量（土木建筑工程）": "civil-measurement",
+        "建设工程造价案例分析（土木建筑工程）": "civil-case",
+    }
+    if code := canonical_codes.get(title.strip()):
+        return code
     return f"subject-{hashlib.sha256(title.encode('utf-8')).hexdigest()[:12]}"
 
 
