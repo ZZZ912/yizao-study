@@ -5,6 +5,81 @@ export type User = {
   is_staff: boolean;
 };
 
+export type DashboardData = {
+  exam: { date: string; days_remaining: number; location: string; specialty: string; syllabus: string };
+  today: { answered: number; correct: number; accuracy: number; due_reviews: number; target_questions: number };
+  question_count: number;
+  wrong_count: number;
+  next_section: null | { id: string; subject: string; chapter: string; title: string; question_count: number };
+};
+
+export type SubjectSummary = {
+  id: string;
+  code: string;
+  title: string;
+  question_count: number;
+  knowledge_count: number;
+};
+
+export type ChapterSummary = {
+  number: number;
+  title: string;
+  sections: Array<{ id: string; number: number; title: string; question_count: number; knowledge_count: number }>;
+};
+
+export type ContentBlock = { type: string; content: string };
+export type SectionDetail = {
+  id: string;
+  subject: { code: string; title: string };
+  chapter: { number: number; title: string };
+  number: number;
+  title: string;
+  question_count: number;
+  knowledge_points: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    content_blocks: ContentBlock[];
+    exam_edition: string;
+  }>;
+};
+
+export type PracticeQuestion = {
+  id: string;
+  version_id: string;
+  external_id: string;
+  question_type: "single_choice" | "multiple_choice";
+  stem: string;
+  options: Array<{ label: string; text: string }>;
+  difficulty: string;
+  subject: { code: string; title: string };
+  chapter: { number: number; title: string };
+  section: { id: string; number: number; title: string };
+};
+
+export type AttemptResult = {
+  attempt_id: string;
+  is_correct: boolean;
+  selected_answer: string[];
+  correct_answer: string[];
+  analysis: string;
+  options: Array<{ label: string; text: string; is_correct: boolean }>;
+  review: null | { status: string; wrong_count: number; next_review_at: string };
+};
+
+export type WrongQuestionSummary = {
+  id: string;
+  question_id: string;
+  stem: string;
+  subject: string;
+  section: string;
+  wrong_count: number;
+  correct_streak: number;
+  status: string;
+  next_review_at: string;
+  wrong_reason: string;
+};
+
 type DataResponse<T> = { data: T };
 type ErrorPayload = {
   error?: {
@@ -132,4 +207,59 @@ export async function logoutUser(): Promise<void> {
     method: "POST",
   });
   clearCsrfToken();
+}
+
+export async function getDashboard(): Promise<DashboardData> {
+  return (await request<DataResponse<DashboardData>>("/api/v1/learning/dashboard/")).data;
+}
+
+export async function getSubjects(): Promise<SubjectSummary[]> {
+  return (await request<DataResponse<SubjectSummary[]>>("/api/v1/learning/subjects/")).data;
+}
+
+export async function getChapters(subjectCode: string): Promise<{ subject: string; chapters: ChapterSummary[] }> {
+  return (await request<DataResponse<{ subject: string; chapters: ChapterSummary[] }>>(
+    `/api/v1/learning/subjects/${encodeURIComponent(subjectCode)}/chapters/`,
+  )).data;
+}
+
+export async function getSection(sectionId: string): Promise<SectionDetail> {
+  return (await request<DataResponse<SectionDetail>>(
+    `/api/v1/learning/sections/${encodeURIComponent(sectionId)}/`,
+  )).data;
+}
+
+export async function getNextQuestion(params: { subject?: string; section?: string; mode?: string }): Promise<PracticeQuestion | null> {
+  const search = new URLSearchParams();
+  if (params.subject) search.set("subject", params.subject);
+  if (params.section) search.set("section", params.section);
+  if (params.mode) search.set("mode", params.mode);
+  const suffix = search.size ? `?${search.toString()}` : "";
+  return (await request<DataResponse<PracticeQuestion | null>>(
+    `/api/v1/learning/questions/next/${suffix}`,
+  )).data;
+}
+
+export async function submitAttempt(payload: {
+  question_version_id: string;
+  selected_answer: string[];
+  elapsed_seconds: number;
+}): Promise<AttemptResult> {
+  return (await csrfMutation<DataResponse<AttemptResult>>("/api/v1/learning/attempts/", {
+    method: "POST",
+    body: JSON.stringify({ ...payload, wrong_reason: "" }),
+  })).data;
+}
+
+export async function updateWrongReason(attemptId: string, wrongReason: string): Promise<void> {
+  await csrfMutation(`/api/v1/learning/attempts/${attemptId}/wrong-reason/`, {
+    method: "PATCH",
+    body: JSON.stringify({ wrong_reason: wrongReason }),
+  });
+}
+
+export async function getWrongQuestions(): Promise<WrongQuestionSummary[]> {
+  return (await request<DataResponse<WrongQuestionSummary[]>>(
+    "/api/v1/learning/wrong-questions/",
+  )).data;
 }

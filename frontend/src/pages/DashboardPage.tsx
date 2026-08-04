@@ -1,68 +1,64 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
 
-import { logoutUser, User } from "../api/client";
-import { currentUserQuery } from "../auth";
+import { getDashboard, User } from "../api/client";
 import { AppShell } from "../components/layout/AppShell";
 import { PageHeader } from "../components/layout/PageHeader";
-import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
-import { Dialog } from "../components/ui/Dialog";
 
 export function DashboardPage({ user }: { user: User }) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const closeDialog = useCallback(() => setDialogOpen(false), []);
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const logoutMutation = useMutation({
-    mutationFn: logoutUser,
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: currentUserQuery.queryKey });
-      navigate("/login", { replace: true });
-    },
-  });
+  const dashboard = useQuery({ queryKey: ["dashboard"], queryFn: getDashboard });
 
   return (
     <AppShell>
       <main className="dashboard-shell">
-        <PageHeader
-          eyebrow="Phase 1 Foundation"
-          title="学习空间"
-          actions={
-            <>
-              <Button variant="ghost" type="button" onClick={() => setDialogOpen(true)}>关于</Button>
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-              >
-                退出登录
-              </Button>
-            </>
-          }
-        />
-        <div className="foundation-layout">
-          <Card className="foundation-main">
-            <p className="eyebrow">基础骨架</p>
-            <h2>你好，{user.display_name || user.email}</h2>
-            <p>账户、导航和部署骨架已经就绪。课程、刷题与复习功能将在后续阶段逐步接入。</p>
-          </Card>
-          <Card className="foundation-support">
-            <h2>当前版本</h2>
-            <p>{__APP_VERSION__}</p>
-          </Card>
-          <details className="card foundation-aside">
-            <summary>辅助区域</summary>
-            <p>宽屏显示三栏；较窄屏幕会按规则自动收起。</p>
-          </details>
-        </div>
+        <PageHeader eyebrow="今日学习" title={`你好，${user.display_name || "同学"}`} />
+        {dashboard.isPending && <div className="card">正在生成今日计划…</div>}
+        {dashboard.isError && <div className="card error-state">今日计划读取失败，请刷新重试。</div>}
+        {dashboard.data && (
+          <>
+            <section className="exam-strip" aria-label="考试倒计时">
+              <div><strong>{dashboard.data.exam.days_remaining}</strong><span>天后考试</span></div>
+              <p>{dashboard.data.exam.location} · {dashboard.data.exam.specialty}</p>
+              <small>{dashboard.data.exam.syllabus}</small>
+            </section>
+            <div className="home-grid">
+              <Card className="today-focus">
+                <p className="eyebrow">今天只抓一件事</p>
+                <h2>{dashboard.data.next_section?.title || "开始第一组精编题"}</h2>
+                <p>
+                  {dashboard.data.next_section
+                    ? `${dashboard.data.next_section.subject} · ${dashboard.data.next_section.chapter}`
+                    : "先完成一组题，系统再根据结果安排复习。"}
+                </p>
+                <div className="progress-row">
+                  <span>今日完成 {dashboard.data.today.answered}/{dashboard.data.today.target_questions} 题</span>
+                  <span>正确率 {dashboard.data.today.accuracy}%</span>
+                </div>
+                <progress value={dashboard.data.today.answered} max={dashboard.data.today.target_questions} />
+                <div className="primary-actions">
+                  {dashboard.data.next_section && (
+                    <Link className="button button--secondary" to={`/study/section/${dashboard.data.next_section.id}`}>先学重难点</Link>
+                  )}
+                  <Link className="button" to="/practice">开始今日20题</Link>
+                </div>
+              </Card>
+              <Card className="compact-task">
+                <p className="eyebrow">今日到期</p>
+                <h2>{dashboard.data.today.due_reviews} 道错题</h2>
+                <p>按间隔计划复习，不堆积。</p>
+                <Link to="/practice?mode=review">开始复习</Link>
+              </Card>
+              <Card className="compact-task">
+                <p className="eyebrow">可用内容</p>
+                <h2>{dashboard.data.question_count} 道已复核题</h2>
+                <p>仅展示通过发布门槛的内容。</p>
+                <Link to="/study">查看四科目录</Link>
+              </Card>
+            </div>
+          </>
+        )}
       </main>
-      <Dialog isOpen={dialogOpen} onClose={closeDialog} title="关于一造学伴">
-        <p>这是第一阶段的可访问性与响应式基础组件示例。</p>
-        <Button type="button" onClick={closeDialog}>知道了</Button>
-      </Dialog>
     </AppShell>
   );
 }

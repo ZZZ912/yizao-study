@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useState } from "react";
+import { NavLink } from "react-router";
 
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -27,7 +28,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <MobileBottomNavigation />
       <Drawer isOpen={menuOpen} onClose={closeMenu} title="导航菜单">
         <nav className="drawer-nav" aria-label="抽屉导航">
-          {['首页', '学习', '刷题', '复习', '我的'].map((item) => <a href="/" key={item}>{item}</a>)}
+          {[
+            ["首页", "/"], ["学习", "/study"], ["刷题", "/practice"], ["复习", "/review"], ["我的", "/profile"],
+          ].map(([item, path]) => <NavLink onClick={closeMenu} to={path} key={item}>{item}</NavLink>)}
         </nav>
       </Drawer>
     </div>
